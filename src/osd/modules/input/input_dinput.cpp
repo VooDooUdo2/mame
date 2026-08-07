@@ -37,7 +37,7 @@ The Windows HID driver supposedly uses the following mappings:
 
 Anything without an explicit mapping is treated as a button.
 
-The WinMM driver supposedly uses the following axis mappings:
+The WinMM driver supposedly uses the following axis mappiif (DI8DEVTYPEDRIVING_DUALPEDALS == subtype)ngs:
 
 X   X
 Y   Y
@@ -682,19 +682,19 @@ void dinput_joystick_device::configure(input_device &device)
 		bool const rypedal = (ITEM_ID_INVALID != axisitems[4]) && !m_joystick.rangemin[4] && (0 < m_joystick.rangemax[4]);
 		bool const rzpedal = (ITEM_ID_INVALID != axisitems[5]) && !m_joystick.rangemin[5] && (0 < m_joystick.rangemax[5]);
 		bool const s0pedal = (ITEM_ID_INVALID != axisitems[6]) && !m_joystick.rangemin[6] && (0 < m_joystick.rangemax[6]);
-		if (DI8DEVTYPEDRIVING_DUALPEDALS == subtype)
+		if (DI8DEVTYPEDRIVING_DUALPEDALS == subtype) // cokray dinput fix
 		{
 			// dual pedals are usually Y and Rz
-			if (ypedal && rzpedal)
-			{
-				pedalitems[0] = axisitems[1];
-				m_joystick.rangemin[1] = m_joystick.rangemax[1];
-				m_joystick.rangemax[1] = -m_joystick.rangemax[1];
+			// if (ypedal && rzpedal)
+			// {
+				// pedalitems[0] = axisitems[1];
+				// m_joystick.rangemin[1] = m_joystick.rangemax[1];
+				// m_joystick.rangemax[1] = -m_joystick.rangemax[1];
 
-				pedalitems[1] = axisitems[5];
-				m_joystick.rangemin[5] = m_joystick.rangemax[5];
-				m_joystick.rangemax[5] = -m_joystick.rangemax[5];
-			}
+				// pedalitems[1] = axisitems[5];
+				// m_joystick.rangemin[5] = m_joystick.rangemax[5];
+				// m_joystick.rangemax[5] = -m_joystick.rangemax[5];
+			// }
 		}
 		else if (DI8DEVTYPEDRIVING_THREEPEDALS == subtype)
 		{

@@ -31,6 +31,7 @@
 #include "ui/slotopt.h"
 #include "ui/tapectrl.h"
 #include "ui/videoopt.h"
+#include "ui/state.h" //cokray added
 
 #include "mame.h"
 #include "luaengine.h"
@@ -73,7 +74,9 @@ enum : unsigned {
 	ABOUT,
 	QUIT_GAME,
 	DISMISS,
-	SELECT_GAME
+	SELECT_GAME,
+	SAVE_STATE,  // cokray added
+	LOAD_STATE   // cokray added	
 };
 
 /***************************************************************************
@@ -89,6 +92,7 @@ menu_main::menu_main(mame_ui_manager &mui, render_target &target)
 	, m_phase(machine_phase::PREINIT)
 {
 	set_needs_prev_menu_item(false);
+	set_heading(_("menu-main", "MAME Menu"));  // cokray added
 }
 
 menu_main::~menu_main()
@@ -114,63 +118,74 @@ void menu_main::menu_activated()
 void menu_main::populate()
 {
 	m_phase = machine().phase();
+	
+	item_append(_("menu-main", "Save State"), 0, (void *)SAVE_STATE); //cokray
+	item_append(_("menu-main", "Load State"), 0, (void *)LOAD_STATE); //cokray
 
-	item_append(_("menu-main", "Input Settings"), 0, (void *)INPUT_OPTIONS);
+	item_append(menu_item_type::SEPARATOR);	//cokray
 
-	if (ui().machine_info().has_dips())
-		item_append(_("menu-main", "DIP Switches"), 0, (void *)SETTINGS_DIP_SWITCHES);
-	if (ui().machine_info().has_configs())
-		item_append(_("menu-main", "Machine Configuration"), 0, (void *)SETTINGS_DRIVER_CONFIG);
+	if (ui().show_fps_counter()) //cokray
+	{
+		item_append(_("menu-main", "Input Settings"), 0, (void *)INPUT_OPTIONS);
 
-	item_append(_("menu-main", "Bookkeeping Info"), 0, (void *)BOOKKEEPING);
+		if (ui().machine_info().has_dips())
+			item_append(_("menu-main", "DIP Switches"), 0, (void *)SETTINGS_DIP_SWITCHES);
+		if (ui().machine_info().has_configs())
+			item_append(_("menu-main", "Machine Configuration"), 0, (void *)SETTINGS_DRIVER_CONFIG);
+
+		item_append(_("menu-main", "Bookkeeping Info"), 0, (void *)BOOKKEEPING);
+	}
 
 	item_append(_("menu-main", "System Information"), 0, (void *)GAME_INFO);
 
 	if (ui().machine_info().has_warnings())
 		item_append(_("menu-main", "Warning Information"), 0, (void *)WARN_INFO);
-
-	for (device_image_interface &image : image_interface_enumerator(machine().root_device()))
+	
+	if (ui().show_fps_counter()) //cokray
 	{
-		if (image.user_loadable() || image.has_preset_images_selection())
+		for (device_image_interface &image : image_interface_enumerator(machine().root_device()))
 		{
-			item_append(_("menu-main", "Media Control"), 0, (void *)IMAGE_MENU_FILE_MANAGER);
-			break;
+			if (image.user_loadable() || image.has_preset_images_selection())
+			{
+				item_append(_("menu-main", "Media Control"), 0, (void *)IMAGE_MENU_FILE_MANAGER);
+				break;
+			}
 		}
-	}
 
-	if (cassette_device_enumerator(machine().root_device()).first() != nullptr)
-		item_append(_("menu-main", "Tape Control"), 0, (void *)TAPE_CONTROL);
+		if (cassette_device_enumerator(machine().root_device()).first() != nullptr)
+			item_append(_("menu-main", "Tape Control"), 0, (void *)TAPE_CONTROL);
 
-	if (pty_interface_enumerator(machine().root_device()).first() != nullptr)
-		item_append(_("menu-main", "Pseudo Terminals"), 0, (void *)PTY_INFO);
+		if (pty_interface_enumerator(machine().root_device()).first() != nullptr)
+			item_append(_("menu-main", "Pseudo Terminals"), 0, (void *)PTY_INFO);
 
-	if (ui().machine_info().has_bioses())
-		item_append(_("menu-main", "BIOS Selection"), 0, (void *)BIOS_SELECTION);
+		if (ui().machine_info().has_bioses())
+			item_append(_("menu-main", "BIOS Selection"), 0, (void *)BIOS_SELECTION);
 
-	if (slot_interface_enumerator(machine().root_device()).first() != nullptr)
-		item_append(_("menu-main", "Slot Devices"), 0, (void *)SLOT_DEVICES);
+		if (slot_interface_enumerator(machine().root_device()).first() != nullptr)
+			item_append(_("menu-main", "Slot Devices"), 0, (void *)SLOT_DEVICES);
 
-	if (barcode_reader_device_enumerator(machine().root_device()).first() != nullptr)
-		item_append(_("menu-main", "Barcode Reader"), 0, (void *)BARCODE_READ);
+		if (barcode_reader_device_enumerator(machine().root_device()).first() != nullptr)
+			item_append(_("menu-main", "Barcode Reader"), 0, (void *)BARCODE_READ);
 
-	if (network_interface_enumerator(machine().root_device()).first() != nullptr)
-		item_append(_("menu-main", "Network Devices"), 0, (void*)NETWORK_DEVICES);
+		if (network_interface_enumerator(machine().root_device()).first() != nullptr)
+			item_append(_("menu-main", "Network Devices"), 0, (void*)NETWORK_DEVICES);
 
-	if (!machine().sound().no_sound() && sound_interface_enumerator(machine().root_device()).first() != nullptr)
-	{
-		item_append(_("menu-main", "Audio Mixer"), 0, (void *)AUDIO_MIXER);
+		if (!machine().sound().no_sound() && sound_interface_enumerator(machine().root_device()).first() != nullptr)
+		{
+			item_append(_("menu-main", "Audio Mixer"), 0, (void *)AUDIO_MIXER);
 
-		item_append(_("menu-main", "Audio Effects"), 0, (void *)AUDIO_EFFECTS);
-	}
+			item_append(_("menu-main", "Audio Effects"), 0, (void *)AUDIO_EFFECTS);
+		}
 
-	// FIXME: should also check for OSD sliders (same for tilde menu)
-	if (!ui().get_slider_list().empty())
-		item_append(_("menu-main", "Slider Controls"), 0, (void *)SLIDERS);
+		// FIXME: should also check for OSD sliders (same for tilde menu)
+		if (!ui().get_slider_list().empty())
+			item_append(_("menu-main", "Slider Controls"), 0, (void *)SLIDERS);
 
-	item_append(_("menu-main", "Video Options"), 0, (void *)VIDEO_TARGETS);
+		item_append(_("menu-main", "Video Options"), 0, (void *)VIDEO_TARGETS);
 
-	if (machine().crosshair().get_usage())
-		item_append(_("menu-main", "Crosshair Options"), 0, (void *)CROSSHAIR);
+		if (machine().crosshair().get_usage())
+			item_append(_("menu-main", "Crosshair Options"), 0, (void *)CROSSHAIR);
+		}
 
 	if (machine().options().cheat())
 		item_append(_("menu-main", "Cheat Options"), 0, (void *)CHEAT);
@@ -185,19 +200,22 @@ void menu_main::populate()
 	}
 
 	item_append(menu_item_type::SEPARATOR);
+	
+	if (ui().show_fps_counter()) //cokray
+	{
+		if (!mame_machine_manager::instance()->favorite().is_favorite(machine()))
+			item_append(_("menu-main", "Add To Favorites"), 0, (void *)FAVORITE);
+		else
+			item_append(_("menu-main", "Remove From Favorites"), 0, (void *)FAVORITE);
 
-	if (!mame_machine_manager::instance()->favorite().is_favorite(machine()))
-		item_append(_("menu-main", "Add To Favorites"), 0, (void *)FAVORITE);
-	else
-		item_append(_("menu-main", "Remove From Favorites"), 0, (void *)FAVORITE);
+		item_append(menu_item_type::SEPARATOR);
 
-	item_append(menu_item_type::SEPARATOR);
+		item_append(string_format(_("menu-main", "About %1$s"), emulator_info::get_appname()), 0, (void *)ABOUT);
 
-	item_append(string_format(_("menu-main", "About %1$s"), emulator_info::get_appname()), 0, (void *)ABOUT);
+		item_append(menu_item_type::SEPARATOR);
 
-	item_append(menu_item_type::SEPARATOR);
-
-//  item_append(_("menu-main", "Quit From System"), 0, (void *)QUIT_GAME);
+	//  item_append(_("menu-main", "Quit From System"), 0, (void *)QUIT_GAME);
+	}
 
 	if (machine_phase::INIT == m_phase)
 	{
@@ -205,7 +223,10 @@ void menu_main::populate()
 	}
 	else
 	{
-		item_append(_("menu-main", "Select New System"), 0, (void *)SELECT_GAME);
+		if (ui().show_fps_counter()) //cokray
+		{
+			item_append(_("menu-main", "Select New System"), 0, (void *)SELECT_GAME);
+		}
 		item_append(_("menu-main", "Close Menu"), 0, (void *)DISMISS);
 	}
 }
@@ -327,6 +348,22 @@ bool menu_main::handle(event const *ev)
 			reset(reset_options::REMEMBER_REF);
 			break;
 		}
+		
+		// cokray begin
+		case SAVE_STATE:
+			//menu::stack_push<menu_save_state>(ui(), container(), true);
+			machine().schedule_save("quick");
+			machine().resume();  // cokray added
+			stack_pop();
+			break;
+
+		case LOAD_STATE:
+			//menu::stack_push<menu_load_state>(ui(), container(), true);
+			machine().schedule_load("quick");
+			machine().resume();  // cokray added
+			stack_pop();			
+			break;
+		// cokray end	
 
 		case QUIT_GAME:
 			stack_pop();

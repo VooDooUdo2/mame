@@ -752,7 +752,7 @@ void mame_ui_manager::display_startup_screens(bool first_time)
 			break;
 
 		case 1:
-			if (show_warnings)
+			if (show_gameinfo) // cokray: changed for no-nag
 			{
 				bool need_warning = machine_info().has_warnings();
 				if (machine_info().has_severe_warnings() || !machine_info().has_warnings())
